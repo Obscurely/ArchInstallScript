@@ -1,4 +1,23 @@
 echo "*************************************************"
+echo "*  Before setup give password for installation  *"
+echo "*************************************************"
+# dialog to verify if passwords match and if they do then it stores the password in the var $password
+echo -n "Password: "
+read -s password
+echo
+echo -n "Repeat Password: "
+read -s password2
+echo
+[[ "$password" == "$password2" ]] || ( echo "Passwords did not match"; exit 1; )
+
+
+echo "*************************************************"
+echo "**                                             **"
+echo "*       Arch Install (script part 1 of 2)       *"
+echo "**                                             **"
+echo "*************************************************"
+
+echo "*************************************************"
 echo "* Setting up mirrors for optimal download       *"
 echo "*************************************************"
 iso=$(curl -4 ifconfig.co/country-iso)
@@ -107,7 +126,7 @@ swapon "/dev/nvme0n1p2" # turns swap on
 echo "*************************************************"
 echo "* Arch Install on Main Drive                    *"
 echo "*************************************************"
-pacstrap /mnt base base-devel linux-zen linux-zen-headers linux-firmware vim nano sudo archlinux-keyring dosfstools btrfs-progs f2fs-tools grub efibootmgr --noconfirm --needed
+pacstrap /mnt base base-devel linux-zen linux-zen-headers linux-firmware vim nano sudo archlinux-keyring dosfstools btrfs-progs f2fs-tools grub efibootmgr wget libnewt --noconfirm --needed
 genfstab -U -p /mnt > /mnt/etc/fstab
 echo "keyserver hkp://keyserver.ubuntu.com" >> /mnt/etc/pacman.d/gnupg/gpg.conf
 
@@ -121,15 +140,14 @@ arch-chroot /mnt
 echo "***************************************"
 echo "**          Network Setup            **"
 echo "***************************************"
-pacman -S networkmanager dhclient --noconfirm --needed
+pacman -S networkmanager dhcpcd --noconfirm --needed
 systemctl enable --now NetworkManager
 
 
 echo "***************************************"
 echo "**      Set Password for Root        **"
 echo "***************************************"
-echo "Enter password for root user: "
-passwd root
+echo "root:$password" | chpasswd
 
 
 echo "**************************************************"
@@ -167,10 +185,10 @@ hostnamectl --no-ask-password set-hostname "netrunner"
 # Add sudo no password rights
 sed -i 's/^# %wheel ALL=(ALL) NOPASSWD: ALL/%wheel ALL=(ALL) NOPASSWD: ALL/' /etc/sudoers
 
-#Add parallel downloading
+# Add parallel downloading
 sed -i 's/^#Para/Para/' /etc/pacman.conf
 
-#Enable multilib
+# Enable multilib
 cat <<EOF >> /etc/pacman.conf
 [multilib]
 Include = /etc/pacman.d/mirrorlist
@@ -188,3 +206,264 @@ echo "**************************************************"
 mkdir /boot/grub
 grub-mkconfig -o /boot/grub/grub.cfg
 grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
+
+
+echo "**************************************************"
+echo "**                                              **"
+echo "*   Arch DE Configuration (script part 2 of 2)   *"
+echo "**                                              **"
+echo "**************************************************"
+
+echo "**************************************************"
+echo "**       Installing packages from pacman        **"
+echo "**************************************************"
+# enabling chaotic-aur
+pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com
+pacman-key --lsign-key 3056513887B78AEB
+pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'
+echo "[chaotic-aur]
+Include = /etc/pacman.d/chaotic-mirrorlist" >> /etc/pacman.conf
+
+# updating pacman in order to download lates packages
+pacman -Sy archlinux-keyring ---noconfirm
+
+# packages list
+PKGS=(
+    'alsa-utils' # sound support
+    'alsa-plugins' # extra alsa plugins
+    'amd-ucode'
+    'ark'
+    'audiocd-kio' 
+    'base'
+    'base-devel'
+    'bash-completition'
+    'bind'
+    'binutils'
+    'bleachbit' # Profile Cleaner
+    'breeze'
+    'breeze-gtk'
+    'btrfs-progs' # brtfs file utils
+    'clementine'
+    'code'
+    'cronie' # cron tasks server
+    'dhcpcd'
+    'dialog' # dialog boxes for script
+    'discord'
+    'dmidecode'
+    'dolphin'
+    'dosfstools' # fat32 file support
+    'drkonqi'
+    'exfat-utils' # exfat file support
+    'firefox'
+    'fuse2'
+    'fuse3'
+    'fuseiso'
+    'gamemode'
+    'gimp'
+    'git'
+    'gnome-keyring'
+    'gnu-free-fonts'
+    'gptfdisk'
+    'grub-customizer'
+    'gsfonts'
+    'gst-libav'
+    'gst-plugins-base'
+    'gst-plugins-good'
+    'gst-plugins-ugly'
+    'gwenview'
+    'haveged' # antropy generator
+    'htop'
+    'jdk-openjdk' # Java 17
+    'kate'
+    'kcalc'
+    'kcharselect'
+    'kcron'
+    'kde-cli-tools'
+    'kde-gtk-config'
+    'kdecoration'
+    'kdenlive' # video editor
+    'kdeplasma-addons'
+    'keepassxc' # Local password manager
+    'kdialog'
+    'kfind'
+    'kgamma5'
+    'kgpg'
+    'khotkeys'
+    'kinfocenter'
+    'kmenuedit'
+    'kmix'
+    'konsole'
+    'kscreen'
+    'kscreenlocker'
+    'ksystemlog'
+    'ksystemstats'
+    'kvantum-qt5'
+    'kwin'
+    'libdbusmenu-glib'
+    'libkscreen'
+    'libksysguard'
+    'libnewt'
+    'libtool'
+    'libreoffice-fresh'
+    'linux-firmware'
+    'linux-tkg-pds'
+    'linux-tkg-pds-headers'
+    'lutris'
+    'lzop'
+    'midori'
+    'make'
+    'milou'
+    'nano'
+    'ncdu' # tool to view space on disk and how much each folder and file take
+    'neofetch' # system information tool
+    'networkmanager'
+    'nmon' # system monitor
+    'notepadqq' # notepad++ version for linux
+    'noto-fonts'
+    'ntfs-3g' # ntfs file support
+    'numlockon' # numlock on on tty
+    'nvidia'
+    'nvidia-dkms' # for custom kernel
+    'obs-studio'
+    'openssh'
+    'p7zip'
+    'pacman-contrib'
+    'partitionmanager' # KDE Partition Manager
+    'picom'
+    'plasma-browser-integration'
+    'plasma-desktop'
+    'plasma-disks'
+    'plasma-integration'
+    'plasma-nm'
+    'plasma-pa'
+    'plasma-systemmonitor'
+    'plasma-workspace'
+    'plasma-workspace-wallpapers'
+    'polkit-kde-agent'
+    'postman' # utility to make http requests
+    'powerdevil'
+    'powerpill'
+    'pulseaudio' # sound server
+    'pulseaudio-alsa' # also configuration for pulseaudio
+    'python'
+    'python-pip'
+    'qbittorrent'
+    'rsync'
+    'sddm'
+    'sddm-kcm'
+    'sdl_ttf'
+    'spectacle'
+    'speedtest-cli'
+    'steam'
+    'sudo'
+    'systemsettings'
+    'traceroute'
+    'ttf-bitstream-vera'
+    'ttf-dejavu'
+    'ttf-fira-code'
+    'ttf-font-awesome'
+    'ttf-hack'
+    'ttf-liberation'
+    'ttf-roboto'
+    'ttf-ubuntu-font-family'
+    'unrar'
+    'unzip'
+    'usbutils'
+    'vim'
+    'wget'
+    'wine-gecko'
+    'wine-mono'
+    'wine-tkg-staging-fsync-git'
+    'winetricks'
+    'xdg-desktop-portal-kde'
+    'xdg-user-dirs' # creates user dirs
+    'xf86-input-libinput'
+    'xorg-fonts-type1'
+    'xorg-server'
+    'xorg-xinit'
+    'zenity' # for wine
+    'zeroconf-ioslave'
+    'zip'
+    'zsh'
+    'zsh-syntax-highlighting'
+    'zsh-autosuggestions'
+)
+
+# install all the packages
+for PKG in "${PKGS[@]}"; do
+    echo "INSTALLING: ${PKG}"
+    sudo pacman -Sy "$PKG" --noconfirm --needed
+done
+
+echo -e "\nDone!\n"
+
+# creating the user 
+if [ $(whoami) = "root"  ];
+then
+    [ ! -d "/home/netrunner" ] && useradd -m -g users -G wheel -s /bin/bash netrunner 
+    cp -R /root/ArchMatic /home/netrunner/
+    echo "--------------------------------------"
+    echo "--      Set Password for netrunner  --"
+    echo "--------------------------------------"
+    echo "netrunner:$password" | chpasswd
+    cp /etc/skel/.bash_profile /home/netrunner/
+    cp /etc/skel/.bash_logout /home/netrunner/
+    cp /etc/skel/.bashrc /home/netrunner/.bashrc
+    chown -R netrunner: /home/netrunner
+    sed -n '#/home/'"netrunner"'/#,s#bash#zsh#' /etc/passwd
+    su - netrunner
+    echo "Switched to user mode"
+else
+	echo "You are already a user proceed with aur installs"
+fi
+
+echo "**************************************************"
+echo "**        Installing packages from AUR          **"
+echo "**************************************************"
+echo -e "\nINSTALLING AUR SOFTWARE\n"
+
+# install yay and configuring zsh
+echo "CLONING: YAY"
+cd ~
+git clone "https://aur.archlinux.org/yay.git"
+cd ${HOME}/yay
+makepkg -si --noconfirm
+cd ~
+touch "$HOME/.cache/zshhistory"
+git clone "https://github.com/ChrisTitusTech/zsh"
+git clone --depth=1 https://github.com/romkatv/powerlevel10k.git $HOME/powerlevel10k
+ln -s "$HOME/zsh/.zshrc" $HOME/.zshrc
+
+# aur packages list
+PKGS=(
+    'autojump'
+    'dxvk-bin'
+    'haruna' # video player
+    'mangohud' # Gaming FPS Counter
+    'mangohud-common'
+    'netdiscover'
+    'ttf-ms-fonts'
+    'zoom' # video conferences
+)
+
+# install the packages
+for PKG in "${PKGS[@]}"; do
+    yay -S --noconfirm $PKG
+done
+
+echo -e "\nDone!\n"
+
+echo "**************************************************"
+echo "**            Fully upgrading system            **"
+echo "**************************************************"
+
+# upgrading with yay
+yay -Syyu --noconfirm
+# upgrading with pacman and powerpill
+sudo pacman -Sy && sudo powerpill -Su
+
+# configure it with using the archdi config part
+# follow ultimate gaming guide and set ip up with script
+# install in vm, configure all apps and backup .config folder and replace it with the script
+# use konsave to save customization
+# follow chris titus tech archmatic for any changes
