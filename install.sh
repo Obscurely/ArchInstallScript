@@ -229,8 +229,9 @@ pacman -Sy archlinux-keyring ---noconfirm
 
 # packages list
 PKGS=(
-    'alsa-utils' # sound support
+    'alsa-lib'
     'alsa-plugins' # extra alsa plugins
+    'alsa-utils' # sound support
     'amd-ucode'
     'ark'
     'audiocd-kio' 
@@ -246,6 +247,7 @@ PKGS=(
     'clementine'
     'code'
     'cronie' # cron tasks server
+    'dbus'
     'dhcpcd'
     'dialog' # dialog boxes for script
     'discord'
@@ -259,15 +261,19 @@ PKGS=(
     'fuse3'
     'fuseiso'
     'gamemode'
+    'giflib'
     'gimp'
     'git'
     'gnome-keyring'
     'gnu-free-fonts'
+    'gnutls'
     'gptfdisk'
     'grub-customizer'
+    'gtk3'
     'gsfonts'
     'gst-libav'
     'gst-plugins-base'
+    'gst-plugins-base-libs'
     'gst-plugins-good'
     'gst-plugins-ugly'
     'gwenview'
@@ -301,11 +307,44 @@ PKGS=(
     'ksystemstats'
     'kvantum-qt5'
     'kwin'
+    'lib32-alsa-lib'
+    'lib32-alsa-plugins'
+    'lib32-giflib'
+    'lib32-libpng'
+    'lib32-libldap'
+    'lib32-gnutls'
+    'lib32-mpg123'
+    'lib32-openal'
+    'lib32-v4l-utils'
+    'lib32-libpulse'
+    'lib32-libgpg-error'
+    'lib32-libjpeg-turbo'
+    'lib32-sqlite'
+    'lib32-libxcomposite'
+    'lib32-libgcrypt'
+    'lib32-libxinerama'
+    'lib32-ncurses'
+    'lib32-opencl-icd-loader'
+    'lib32-libxslt'
+    'lib32-libva'
+    'lib32-gtk3'
+    'lib32-gst-plugins-base-libs'
+    'lib32-vulkan-icd-loader'
+    'libjpeg-turbo'
     'libdbusmenu-glib'
+    'libgpg-error'
     'libkscreen'
     'libksysguard'
+    'libldap'
     'libnewt'
+    'libpng'
+    'libpulse'
     'libtool'
+    'libxcomposite'
+    'libxinerama'
+    'libva'
+    'libgcrypt'
+    'libxslt'
     'libreoffice-fresh'
     'linux-firmware'
     'linux-tkg-pds'
@@ -314,9 +353,12 @@ PKGS=(
     'lzop'
     'midori'
     'make'
+    'meson'
     'milou'
+    'mpg123'
     'nano'
     'ncdu' # tool to view space on disk and how much each folder and file take
+    'ncurses'
     'neofetch' # system information tool
     'networkmanager'
     'nmon' # system monitor
@@ -327,6 +369,8 @@ PKGS=(
     'nvidia'
     'nvidia-dkms' # for custom kernel
     'obs-studio'
+    'openal'
+    'opencl-icd-loader'
     'openssh'
     'p7zip'
     'pacman-contrib'
@@ -357,9 +401,11 @@ PKGS=(
     'sdl_ttf'
     'spectacle'
     'speedtest-cli'
+    'sqlite'
     'steam'
     'sudo'
     'swtpm'
+    'systemd'
     'systemsettings'
     'terminus-font'
     'traceroute'
@@ -375,7 +421,9 @@ PKGS=(
     'unrar'
     'unzip'
     'usbutils'
+    'v4l-utils'
     'vim'
+    'vulkan-icd-loader'
     'wget'
     'which'
     'wine-gecko'
@@ -635,15 +683,16 @@ konsave -i $HOME/ArchMatic/kde.knsv
 sleep 1
 konsave -a kde
 
+# Securing arch
+# --- Setup UFW rules
+sudo ufw limit 22/tcp  
+sudo ufw allow 80/tcp  
+sudo ufw allow 443/tcp  
+sudo ufw default deny incoming  
+sudo ufw default allow outgoing
+sudo ufw enable
+
 # Done installed arch linux
 echo "DONE!!! Press enter to reboot!"
 read ans
 reboot now
-
-# follow ultimate gaming guide and set ip up with script
-# follow guides from christitus.com
-# search for arch performance tweaks
-# install in vm, configure all apps and backup .config folder and replace it with the script
-# use konsave to save customization
-# add my firefox profile
-# follow chris titus tech archmatic for any changes
