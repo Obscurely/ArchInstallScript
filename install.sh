@@ -1,6 +1,10 @@
 echo "*************************************************"
 echo "*  Before setup give password for installation  *"
 echo "*************************************************"
+# dialog for hostname and username
+echo -n "Username: "
+read -s username
+echo
 # dialog to verify if passwords match and if they do then it stores the password in the var $password
 echo -n "Password: "
 read -s password
@@ -22,7 +26,8 @@ echo "* Setting up mirrors for optimal download       *"
 echo "*************************************************"
 iso=$(curl -4 ifconfig.co/country-iso)
 timedatectl set-ntp true
-pacman -S --noconfirm pacman-contrib
+pacman -S --noconfirm pacman-contrib terminus-font
+setfont ter-v22b
 pacman -S --noconfirm reflector rsync
 mv /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
 reflector -a 48 -c $iso -f 5 -l 20 --sort rate --save /etc/pacman.d/mirrorlist
@@ -140,7 +145,7 @@ arch-chroot /mnt
 echo "***************************************"
 echo "**          Network Setup            **"
 echo "***************************************"
-pacman -S networkmanager dhcpcd --noconfirm --needed
+pacman -S networkmanager dhclient --noconfirm --needed
 systemctl enable --now NetworkManager
 
 
@@ -180,7 +185,7 @@ hwclock --systohc --utc
 localectl --no-ask-password set-keymap us
 
 # Set computer name
-hostnamectl --no-ask-password set-hostname "netrunner"
+hostnamectl --no-ask-password set-hostname "$username"
 
 # Add sudo no password rights
 sed -i 's/^# %wheel ALL=(ALL) NOPASSWD: ALL/%wheel ALL=(ALL) NOPASSWD: ALL/' /etc/sudoers
@@ -218,9 +223,9 @@ echo "**************************************************"
 echo "**       Installing packages from pacman        **"
 echo "**************************************************"
 # enabling chaotic-aur
-pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com
-pacman-key --lsign-key 3056513887B78AEB
-pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'
+sudo pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com
+sudo pacman-key --lsign-key 3056513887B78AEB
+sudo pacman -U 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'
 echo "[chaotic-aur]
 Include = /etc/pacman.d/chaotic-mirrorlist" >> /etc/pacman.conf
 
@@ -248,7 +253,6 @@ PKGS=(
     'code'
     'cronie' # cron tasks server
     'dbus'
-    'dhcpcd'
     'dialog' # dialog boxes for script
     'discord'
     'dmidecode'
@@ -455,18 +459,17 @@ echo -e "\nDone!\n"
 # creating the user 
 if [ $(whoami) = "root"  ];
 then
-    [ ! -d "/home/netrunner" ] && useradd -m -g users -G wheel -s /bin/bash netrunner 
-    cp -R /root/ArchMatic /home/netrunner/
+    [ ! -d "/home/$username" ] && useradd -m -g users -G wheel -s /bin/bash $username 
+    cp -R /root/ArchMatic /home/$username/
     echo "--------------------------------------"
-    echo "--      Set Password for netrunner  --"
+    echo "--      Set Password for $username  --"
     echo "--------------------------------------"
-    echo "netrunner:$password" | chpasswd
-    cp /etc/skel/.bash_profile /home/netrunner/
-    cp /etc/skel/.bash_logout /home/netrunner/
-    cp /etc/skel/.bashrc /home/netrunner/.bashrc
-    chown -R netrunner: /home/netrunner
-    sed -n '#/home/'"netrunner"'/#,s#bash#zsh#' /etc/passwd
-    su - netrunner
+    echo "$username:$password" | chpasswd
+    cp /etc/skel/.bash_profile /home/$username/
+    cp /etc/skel/.bash_logout /home/$username/
+    cp /etc/skel/.bashrc /home/$username/.bashrc
+    chown -R $username: /home/$username
+    sed -n '#/home/'"$username"'/#,s#bash#zsh#' /etc/passwd
     echo "Switched to user mode"
 else
 	echo "You are already a user proceed with aur installs"
@@ -610,6 +613,28 @@ sudo sed -i 's|load-module module-esound-protocol-unix|#load-module module-esoun
 # enable login display manager
 sudo systemctl enable --now sddm.service
 
+
+# enable login dispaly manager
+udo systemctl enable --now sddm.service
+
+
+echo -e "\nSetup SDDM Theme"
+
+sudo cat <<EOF > /etc/sddm.conf.d/kde_settings.conf
+[Autologin]
+Relogin=false
+Session=
+User=
+[General]
+HaltCommand=/usr/bin/systemctl poweroff
+RebootCommand=/usr/bin/systemctl reboot
+[Theme]
+Current=Nordic
+[Users]
+MaximumUid=60513
+MinimumUid=1000
+EOF
+
 # Remove no password sudo rights
 sed -i 's/^%wheel ALL=(ALL) NOPASSWD: ALL/# %wheel ALL=(ALL) NOPASSWD: ALL/' /etc/sudoers
 # Add sudo rights
@@ -627,6 +652,7 @@ PKGS=(
 'earlyoom'
 'ananicy-git'
 'libva-vdpau-driver'
+'goverlay'
 )
 
 # creating a temp dir
@@ -641,6 +667,7 @@ git clone https://github.com/Frogging-Family/nvidia-all.git
 cd nvidia-all
 makepkg -si
 ;;
+cd ..
 
 # installing the package list
 for PKG in "${PKGS[@]}"; do
@@ -653,6 +680,11 @@ echo -e "\nEnableing Services and Tweaking\n"
 
 systemctl --user enable gamemoded && systemctl --user start gamemoded
 systemctl enable --now earlyoom
+
+# grauda linux performance tweaks package
+git clone https://gitlab.com/garuda-linux/themes-and-settings/settings/performance-tweaks.git
+cd performance-tweaks
+makepkg -si --noconfirm
 
 sudo sysctl -w net.core.netdev_max_backlog = 16384
 sudo sysctl -w net.core.somaxconn = 8192
@@ -683,8 +715,7 @@ konsave -i $HOME/ArchMatic/kde.knsv
 sleep 1
 konsave -a kde
 
-# Securing arch
-# --- Setup UFW rules
+# Setup UFW rules
 sudo ufw limit 22/tcp  
 sudo ufw allow 80/tcp  
 sudo ufw allow 443/tcp  
