@@ -47,6 +47,23 @@ echo "*************************************************"
 echo "Installing prereqs...\n"
 pacman -S --noconfirm gptfdisk btrfs-progs f2fs-tools
 
+# Label partitions
+echo "Labeling partitions."
+
+sgdisk -c 5:"UEFISYS" /dev/nvme0n1
+sgdisk -c 3:"SWAP" /dev/sda 
+sgdisk -c 6:"ROOT" /dev/nvme0n1 
+sgdisk -c 4:"HOME" /dev/sda
+
+# Make filesystems
+echo "Making file systems."
+
+ # on /dev/nvme0n1 (nvme ssd)
+mkfs.vfat -F32 -n "UEFISYS" "/dev/nvme0n1p5" # formating efi partition with fat.
+mkswap -L "SWAP" "/dev/sda3" # formating swap partition with linux swap.
+mkfs.f2fs -f -l "ROOT" "/dev/nvme0n1p6" # formating root partition with f2fs.
+mkfs.f2fs -f -l "HOME" "/dev/sda4" # formating home partition with f2fs.
+
 # Create dirs for targets
 mkdir /mnt/boot # makes boot dir
 mkdir /mnt/home # makes home dir
